@@ -75,7 +75,7 @@ ollama pull qwen2.5:7b
 编辑 `foodManager.py` 中的 `MODEL_PATH` 变量，指向你的 YOLO 模型权重文件：
 
 ```python
-MODEL_PATH = r"path\to\your\yolo11s_64classes_v12\weights\best.pt"
+MODEL_PATH = r"model\best.pt"
 ```
 
 ### 启动应用
@@ -97,6 +97,7 @@ python foodManager.py
 
 - **流式对话**：实时显示 AI 回复，支持多轮上下文记忆
 - **会话管理**：新建/切换/删除聊天会话，JSON 持久化
+- **动态头像**：根据用户性别自动切换头像（男 `boy.jpg` / 女 `girl.jpg`），修改档案后实时生效
 - **营养医师人设**：基于用户档案和当日饮食记录提供个性化建议
 - **侧边栏**：历史会话列表，一键切换
 
@@ -104,7 +105,7 @@ python foodManager.py
 
 - **配色**：翠绿色（Emerald #059669）医疗健康风格
 - **布局**：标签页导航 + 登录卡片 + 聊天双栏布局
-- **头像**：用户与 AI 医生头像（可自定义路径）
+- **头像**：用户头像按性别动态切换，医生头像固定；图片缺失时自动降级
 
 ## 📝 开发说明
 

@@ -62,7 +62,10 @@ logger.info(f"当前运行设备：{device}")
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
 plt.rcParams['axes.unicode_minus'] = False
 
-MODEL_PATH = r"E:\4C_race\runs\detect\DietHealth\yolo11s_64classes_v12\weights\best.pt"
+# 头像图片目录（绝对路径，保证跨环境兼容）
+PICTURE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "picture")
+
+MODEL_PATH = r"model\best.pt"
 model = YOLO(MODEL_PATH)
 model.eval()
 
@@ -1131,6 +1134,44 @@ def update_profile_handler(username, name, height, weight, age, gender, activity
         name=name, height=height, weight=weight, age=age,
         gender=gender, activity=activity, goal=goal, disease=disease
     )
+
+
+def update_chat_avatar(username):
+    """
+    根据用户性别返回 gr.update 用于动态更新 chat_bot 头像
+    - 男 → boy.jpg，女 → girl.jpg
+    - 医生头像固定为 doctor.jpg
+    - 文件缺失时静默降级（尝试另一性别，都缺失则留空）
+    """
+    doctor_path = os.path.join(PICTURE_DIR, "doctor.jpg")
+    if not os.path.exists(doctor_path):
+        doctor_path = ""
+
+    # 默认男头像
+    default_user_path = os.path.join(PICTURE_DIR, "boy.jpg")
+    if not username:
+        return gr.update(avatar_images=(default_user_path if os.path.exists(default_user_path) else "", doctor_path))
+
+    # 读取用户性别
+    try:
+        dm = DietManager.get_instance(username)
+        gender = dm.profile.get("gender", "男")
+    except Exception:
+        gender = "男"
+
+    selected = "boy.jpg" if gender == "男" else "girl.jpg"
+    user_path = os.path.join(PICTURE_DIR, selected)
+
+    # 降级逻辑：目标文件不存在时尝试另一性别头像
+    if not os.path.exists(user_path):
+        fallback = "girl.jpg" if gender == "男" else "boy.jpg"
+        fallback_path = os.path.join(PICTURE_DIR, fallback)
+        if os.path.exists(fallback_path):
+            user_path = fallback_path
+        else:
+            user_path = ""
+
+    return gr.update(avatar_images=(user_path, doctor_path))
 
 
 def show_weekly_trend(username):
@@ -2346,7 +2387,10 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
                     chat_bot = gr.Chatbot(
                         value=[],
                         height=500,
-                        avatar_images=(r"E:\4C_race\picture\user.png", r"E:\4C_race\picture\doctor.jpg"),
+                        avatar_images=(
+                            os.path.join(PICTURE_DIR, "boy.jpg"),
+                            os.path.join(PICTURE_DIR, "doctor.jpg")
+                        ),
                         elem_id="main_chatbot",
                     )
                     with gr.Row():
@@ -2364,7 +2408,7 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
 
     # ---- 登录区块事件 ----
 
-    # 登录按钮
+    # 登录按钮 → 初始化聊天状态 → 更新头像
     login_btn.click(
         fn=handle_login,
         inputs=[login_username, login_password],
@@ -2373,9 +2417,13 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         fn=init_chat_state,
         inputs=[current_user],
         outputs=[current_session_id, session_list, session_ids_state, session_title, chat_bot]
+    ).then(
+        fn=update_chat_avatar,
+        inputs=[current_user],
+        outputs=[chat_bot]
     )
 
-    # 注册按钮
+    # 注册按钮 → 初始化聊天状态 → 更新头像
     reg_btn.click(
         fn=handle_register,
         inputs=[reg_username, reg_password, reg_confirm],
@@ -2384,6 +2432,10 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         fn=init_chat_state,
         inputs=[current_user],
         outputs=[current_session_id, session_list, session_ids_state, session_title, chat_bot]
+    ).then(
+        fn=update_chat_avatar,
+        inputs=[current_user],
+        outputs=[chat_bot]
     )
 
     # 切换到注册表单
@@ -2400,7 +2452,7 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         outputs=[login_form, register_form, auth_message]
     )
 
-    # ---- 退出登录 ----
+    # ---- 退出登录 → 清空聊天状态 → 重置头像 ----
     logout_btn.click(
         fn=handle_logout,
         inputs=None,
@@ -2409,6 +2461,10 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         fn=lambda: ("", pd.DataFrame({"💬 会话": [], "🕒 更新时间": []}), [], "", []),
         inputs=None,
         outputs=[current_session_id, session_list, session_ids_state, session_title, chat_bot]
+    ).then(
+        fn=update_chat_avatar,
+        inputs=[current_user],  # 此时 current_user 已由 handle_logout 设为空字符串
+        outputs=[chat_bot]
     )
 
     # 登录成功时更新用户信息栏（通过 current_user 变化触发）
@@ -2441,12 +2497,16 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         outputs=[manual_nutrition_output, manual_record_output]
     )
 
-    # 个人档案更新
+    # 个人档案更新 → 同步刷新头像
     profile_btn.click(
         fn=update_profile_handler,
         inputs=[current_user, name_input, height_input, profile_weight_input, age_input,
                 gender_input, activity_input, goal_input, disease_input],
         outputs=profile_output
+    ).then(
+        fn=update_chat_avatar,
+        inputs=[current_user],
+        outputs=[chat_bot]
     )
 
     # 查询记录
