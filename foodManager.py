@@ -1174,6 +1174,46 @@ def update_chat_avatar(username):
     return gr.update(avatar_images=(user_path, doctor_path))
 
 
+def load_profile_to_form(username):
+    """
+    根据用户名加载个人档案，返回所有档案输入框的 gr.update 对象
+    - 登录后自动填充已保存数据
+    - 保存后刷新输入框
+    - 退出登录时重置为默认值
+    """
+    if not username:
+        # 未登录 → 默认值
+        return (
+            gr.update(value="用户"),
+            gr.update(value=170),
+            gr.update(value=65),
+            gr.update(value=20),
+            gr.update(value="男"),
+            gr.update(value="轻度活动"),
+            gr.update(value="维持体重"),
+            gr.update(value="健康")
+        )
+
+    try:
+        dm = DietManager.get_instance(username)
+        if dm is None:
+            return load_profile_to_form("")
+        p = dm.profile
+        return (
+            gr.update(value=p.get("name", username)),
+            gr.update(value=p.get("height", 170)),
+            gr.update(value=p.get("weight", 65)),
+            gr.update(value=p.get("age", 20)),
+            gr.update(value=p.get("gender", "男")),
+            gr.update(value=p.get("activity", "轻度活动")),
+            gr.update(value=p.get("goal", "维持体重")),
+            gr.update(value=p.get("disease", "健康"))
+        )
+    except Exception as e:
+        logger.error(f"加载档案到表单失败 ({username}): {e}")
+        return load_profile_to_form("")
+
+
 def show_weekly_trend(username):
     """展示周趋势 —— 多用户版"""
     if not username:
@@ -2408,7 +2448,7 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
 
     # ---- 登录区块事件 ----
 
-    # 登录按钮 → 初始化聊天状态 → 更新头像
+    # 登录按钮 → 初始化聊天状态 → 更新头像 → 加载档案
     login_btn.click(
         fn=handle_login,
         inputs=[login_username, login_password],
@@ -2421,9 +2461,14 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         fn=update_chat_avatar,
         inputs=[current_user],
         outputs=[chat_bot]
+    ).then(
+        fn=load_profile_to_form,
+        inputs=[current_user],
+        outputs=[name_input, height_input, profile_weight_input, age_input,
+                 gender_input, activity_input, goal_input, disease_input]
     )
 
-    # 注册按钮 → 初始化聊天状态 → 更新头像
+    # 注册按钮 → 初始化聊天状态 → 更新头像 → 加载档案
     reg_btn.click(
         fn=handle_register,
         inputs=[reg_username, reg_password, reg_confirm],
@@ -2436,6 +2481,11 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         fn=update_chat_avatar,
         inputs=[current_user],
         outputs=[chat_bot]
+    ).then(
+        fn=load_profile_to_form,
+        inputs=[current_user],
+        outputs=[name_input, height_input, profile_weight_input, age_input,
+                 gender_input, activity_input, goal_input, disease_input]
     )
 
     # 切换到注册表单
@@ -2465,6 +2515,11 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         fn=update_chat_avatar,
         inputs=[current_user],  # 此时 current_user 已由 handle_logout 设为空字符串
         outputs=[chat_bot]
+    ).then(
+        fn=load_profile_to_form,
+        inputs=[current_user],  # 空字符串 → 重置为默认值
+        outputs=[name_input, height_input, profile_weight_input, age_input,
+                 gender_input, activity_input, goal_input, disease_input]
     )
 
     # 登录成功时更新用户信息栏（通过 current_user 变化触发）
@@ -2497,7 +2552,7 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         outputs=[manual_nutrition_output, manual_record_output]
     )
 
-    # 个人档案更新 → 同步刷新头像
+    # 个人档案更新 → 同步刷新头像 → 刷新输入框
     profile_btn.click(
         fn=update_profile_handler,
         inputs=[current_user, name_input, height_input, profile_weight_input, age_input,
@@ -2507,6 +2562,11 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         fn=update_chat_avatar,
         inputs=[current_user],
         outputs=[chat_bot]
+    ).then(
+        fn=load_profile_to_form,
+        inputs=[current_user],
+        outputs=[name_input, height_input, profile_weight_input, age_input,
+                 gender_input, activity_input, goal_input, disease_input]
     )
 
     # 查询记录

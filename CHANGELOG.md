@@ -118,6 +118,30 @@
 4. **`chat_bot` 初始化路径修正**
    - 从相对路径 `r"picture\boy.jpg"` 改为 `os.path.join(PICTURE_DIR, "boy.jpg")`
 
+### 第五阶段：档案表单实时同步（fifth.md）
+
+**目标**：个人档案输入框实现登录自动填充、保存后刷新、退出重置。
+
+**改动要点**：
+
+1. **新增 `load_profile_to_form(username)` 函数**
+   - 返回 8 个 `gr.update()` 对象（姓名/身高/体重/年龄/性别/活动量/目标/身体状况）
+   - 已登录 → 从 `DietManager.profile` 加载真实数据
+   - 未登录/异常 → 返回默认值（安全兜底）
+
+2. **四处事件链追加 `.then()`**
+   - 登录按钮：`…→ update_chat_avatar →` **`load_profile_to_form`**（自动填充已保存档案）
+   - 注册按钮：`…→ update_chat_avatar →` **`load_profile_to_form`**（填充默认值）
+   - 退出登录：`…→ update_chat_avatar →` **`load_profile_to_form`**（重置为默认值）
+   - 档案更新：`…→ update_chat_avatar →` **`load_profile_to_form`**（保存后立即刷新输入框确认写入）
+
+3. **事件执行顺序**
+   ```
+   登录: handle_login → init_chat_state → update_chat_avatar → load_profile_to_form
+   保存: update_profile_handler → update_chat_avatar → load_profile_to_form
+   退出: handle_logout → 清空聊天 → update_chat_avatar → load_profile_to_form
+   ```
+
 ---
 
 ## 已知问题 & 后续优化方向
