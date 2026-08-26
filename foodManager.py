@@ -1472,8 +1472,8 @@ def delete_chat_session(username, session_id):
 def _make_session_title_html(title):
     """生成会话标题的 HTML 片段（右侧聊天区顶部）"""
     return f"""
-    <div style="padding: 10px 16px; background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #059669;">
-        <span style="color: #065f46; font-weight: 600; font-size: 15px;">💬 {title}</span>
+    <div class="fm-session-title">
+        <span>💬 {title}</span>
     </div>
     """
 
@@ -1728,11 +1728,12 @@ def get_user_bar_html(username):
     """生成顶部用户信息栏的HTML"""
     if not username:
         return ""
+    avatar_char = username.strip()[:1].upper() if username.strip() else "U"
     return f"""
-    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 8px 16px; background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px; margin-bottom: 12px;">
-        <span style="color: #065f46; font-weight: 600; font-size: 15px;">
-            👤 {username}
-        </span>
+    <div class="fm-user-chip">
+        <span class="fm-user-avatar">{avatar_char}</span>
+        <span class="fm-user-name">{username}</span>
+        <span class="fm-user-dot" title="在线"></span>
     </div>
     """
 
@@ -1934,154 +1935,398 @@ def handle_cancel_delete():
 health_theme = gr.themes.Soft(
     primary_hue="emerald",
     secondary_hue="teal",
-    font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
-    radius_size=gr.themes.sizes.radius_lg
+    neutral_hue="slate",
+    font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "Segoe UI", "Microsoft YaHei", "sans-serif"],
+    radius_size=gr.themes.sizes.radius_lg,
+    text_size=gr.themes.sizes.text_md
 ).set(
     button_primary_background_fill="*primary_500",
     button_primary_background_fill_hover="*primary_600",
     button_primary_text_color="white",
+    button_secondary_background_fill="*background_fill_primary",
+    button_secondary_background_fill_hover="*neutral_100",
+    button_secondary_border_color="*neutral_200",
+    button_secondary_text_color="*neutral_700",
+    block_background_fill="*background_fill_primary",
+    block_border_width="1px",
+    block_border_color="*neutral_200",
+    block_label_background_fill="transparent",
+    block_label_border_width="0px",
+    block_label_text_color="*neutral_600",
+    block_label_text_weight="600",
+    block_label_text_size="*text_sm",
     block_title_text_weight="600",
-    block_border_width="0px",
-    block_shadow="*shadow_drop_lg"
+    block_title_text_color="*neutral_700",
+    input_background_fill="*background_fill_primary",
+    input_border_color="*neutral_200",
+    input_border_color_focus="*primary_500",
+    shadow_drop_lg="0 8px 24px rgba(15, 23, 42, 0.08)",
+    block_shadow="0 1px 3px rgba(15, 23, 42, 0.05)"
 )
 
 custom_css = """
-footer {display: none !important;}
-.gradio-container {background-color: #f8fafc;}
-.primary-btn {transition: all 0.3s ease;}
-.primary-btn:hover {transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);}
+/* ==========================================================
+   膳康管家 · 现代医疗健康风主题（Emerald 设计语言）
+   设计规范：主色 #059669/#10b981 · 中性色 Slate · 圆角 10/16px
+   阴影三级 · 全局微交互（hover 上浮 / focus 光环 / 过渡动画）
+   ========================================================== */
 
-/* 登录页面卡片样式 */
-.login-header {
-    text-align: center;
-    margin-bottom: 28px;
+/* ---------- 0. 全局基础 ---------- */
+footer {display: none !important;}
+
+.gradio-container {
+    background:
+        radial-gradient(1200px 500px at 85% -10%, rgba(16, 185, 129, 0.08), transparent 60%),
+        radial-gradient(900px 420px at -10% 0%, rgba(20, 184, 166, 0.07), transparent 55%),
+        #f6f8fb;
+    font-feature-settings: "tnum";
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 细滚动条 */
+::-webkit-scrollbar {width: 8px; height: 8px;}
+::-webkit-scrollbar-track {background: transparent;}
+::-webkit-scrollbar-thumb {background: #cbd5e1; border-radius: 8px;}
+::-webkit-scrollbar-thumb:hover {background: #94a3b8;}
+
+/* 组件卡片：白底 + 细边框 + 柔和阴影，悬停轻微增强 */
+.gradio-container .block {
+    border-radius: 12px !important;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+/* 进入动画 */
+@keyframes fm-fade-up {
+    from {opacity: 0; transform: translateY(10px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+/* ---------- 1. 按钮体系（微交互） ---------- */
+.gradio-container button {
+    transition: transform 0.18s ease, box-shadow 0.25s ease,
+                background-color 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
+}
+.gradio-container button:active {transform: translateY(1px) scale(0.99);}
+
+/* 主按钮：渐变 + 悬停上浮 + 品牌色投影 */
+.gradio-container button.primary,
+.primary-btn button, button.primary-btn,
+.new-chat-btn button, button.new-chat-btn,
+.send-btn button, button.send-btn {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+    border: none !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25) !important;
+}
+.gradio-container button.primary:hover,
+.primary-btn button:hover, button.primary-btn:hover,
+.new-chat-btn button:hover, button.new-chat-btn:hover,
+.send-btn button:hover, button.send-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(5, 150, 105, 0.35) !important;
+    filter: brightness(1.04);
+}
+
+/* 次要按钮：白底描边，悬停浅绿 */
+.gradio-container button.secondary:hover {
+    border-color: #10b981 !important;
+    color: #047857 !important;
+    background: #ecfdf5 !important;
+}
+
+/* 危险按钮（variant=stop） */
+.gradio-container button.stop:hover {filter: brightness(1.05);}
+
+/* ---------- 2. 登录 / 注册页 ---------- */
+#login_card_wrap {
+    max-width: 460px;
+    margin: 48px auto 24px auto;
+    background: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.10), 0 4px 14px rgba(5, 150, 105, 0.06) !important;
+    padding: 36px 34px 28px 34px !important;
+    animation: fm-fade-up 0.45s ease both;
+}
+/* 卡片内部组件块去除双层边框，形成整体感 */
+#login_card_wrap .block {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.login-header {text-align: center; margin-bottom: 24px;}
+.login-header h2 {border-left: none !important; padding-left: 0 !important;}
+.login-header .fm-logo {
+    width: 68px; height: 68px; margin: 0 auto 12px auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 34px; border-radius: 20px;
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .login-header h2 {
-    color: #059669;
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 6px;
+    color: #065f46; font-size: 1.7rem; font-weight: 800;
+    margin: 0 0 6px 0; letter-spacing: 1px;
 }
-.login-header p {
-    color: #6b7280;
-    font-size: 0.95rem;
-}
+.login-header p {color: #64748b; font-size: 0.92rem; margin: 0;}
 
-/* 输入框增强 */
+/* 登录输入框 */
 .auth-input input, .auth-input textarea {
     border-radius: 10px !important;
-    padding: 12px 16px !important;
+    padding: 11px 14px !important;
     border: 1.5px solid #e2e8f0 !important;
-    transition: all 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     font-size: 15px !important;
+    background: #f8fafc !important;
 }
 .auth-input input:focus, .auth-input textarea:focus {
     border-color: #059669 !important;
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12) !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.12) !important;
+}
+.auth-input span[data-testid="block-info"] {
+    color: #475569 !important; font-weight: 600 !important; font-size: 13px !important;
 }
 
-/* 主按钮样式增强 */
-.auth-btn > button, .auth-btn button {
+/* 登录主按钮 */
+.auth-btn button, button.auth-btn {
     border-radius: 10px !important;
     padding: 12px 24px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     font-size: 16px !important;
-    background: linear-gradient(135deg, #059669, #10b981) !important;
-    border: none !important;
-    transition: all 0.3s ease !important;
-}
-.auth-btn > button:hover, .auth-btn button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.35) !important;
+    letter-spacing: 4px;
 }
 
-/* 切换链接按钮 - 无背景无边框 */
-.switch-link button, .switch-link > button {
+/* 切换链接按钮（无边框透明链接样式） */
+.switch-link button, button.switch-link {
     background: none !important;
     border: none !important;
+    box-shadow: none !important;
     color: #059669 !important;
     font-size: 14px !important;
     font-weight: 500 !important;
     cursor: pointer !important;
-    box-shadow: none !important;
-    padding: 4px 8px !important;
+    padding: 6px 10px !important;
+    width: fit-content !important;
+    margin: 2px auto 0 auto;
+    white-space: nowrap !important;
 }
-.switch-link button:hover, .switch-link > button:hover {
+.switch-link button:hover, button.switch-link:hover {
+    background: none !important;
     color: #047857 !important;
     text-decoration: underline !important;
+    transform: none;
+}
+
+/* 登录表单容器去灰底，融入卡片 */
+#login_form, #register_form {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+#login_card_wrap .form {
+    background: transparent !important;
+    border: none !important;
     box-shadow: none !important;
 }
 
-/* 退出按钮 */
-.logout-btn > button, .logout-btn button {
-    border-radius: 8px !important;
-    font-size: 13px !important;
-    padding: 6px 16px !important;
-}
-
-/* 消息提示 */
+/* 提示消息条：空态隐藏，有内容时为浅绿消息条 */
+.auth-msg {border: none !important; background: transparent !important; box-shadow: none !important;}
+.auth-msg:has(textarea:placeholder-shown) {display: none;}
 .auth-msg textarea, .auth-msg input {
     font-size: 14px !important;
     text-align: center !important;
+    color: #065f46 !important;
+    background: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+    border-radius: 10px !important;
+    padding: 10px 12px !important;
+    font-weight: 500;
+    animation: fm-fade-up 0.3s ease both;
 }
 
-/* 登录卡片底座 */
-#login_card_wrap {
-    max-width: 440px;
-    margin: 60px auto 20px auto;
+/* ---------- 3. 顶栏（用户信息 + 退出） ---------- */
+#user_bar_row {
+    align-items: center !important;
+    gap: 12px;
+    margin-bottom: 4px;
+    flex-wrap: nowrap !important;
+}
+.fm-user-chip {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 18px 8px 10px;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border: 1px solid #a7f3d0;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.10);
+    width: fit-content;
+}
+.fm-user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff; font-weight: 700; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.fm-user-name {color: #065f46; font-weight: 700; font-size: 14px; letter-spacing: 0.5px;}
+.fm-user-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
 }
 
-/* ======== 聊天界面样式 ======== */
+.logout-btn button, button.logout-btn {
+    border-radius: 999px !important;
+    font-size: 13px !important;
+    padding: 7px 18px !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    background: #ffffff !important;
+    color: #dc2626 !important;
+    border: 1px solid #fecaca !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+}
+.logout-btn button:hover, button.logout-btn:hover {
+    background: #fef2f2 !important;
+    border-color: #f87171 !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15) !important;
+    transform: translateY(-1px);
+}
 
-/* 侧边栏 */
+/* ---------- 4. 主标题区 ---------- */
+.fm-hero {text-align: center; max-width: 800px; margin: 0 auto; padding: 14px 0 22px 0; animation: fm-fade-up 0.4s ease both;}
+.fm-hero h1, .fm-hero h3 {border-left: none !important; padding-left: 0 !important;}
+.fm-hero h1 {
+    color: #047857; font-size: 2.6rem; font-weight: 800;
+    margin: 0 0 8px 0; letter-spacing: 2px;
+    background: linear-gradient(135deg, #047857, #10b981);
+    -webkit-background-clip: text; background-clip: text;
+}
+.fm-hero h3 {color: #475569; font-size: 1.15rem; font-weight: 400; margin: 0 0 14px 0;}
+.fm-hero-badge {
+    display: inline-block; background: #d1fae5; color: #065f46;
+    padding: 5px 16px; border-radius: 999px;
+    font-size: 0.85rem; font-weight: 500;
+    border: 1px solid #a7f3d0;
+}
+
+/* ---------- 5. 标签页导航（胶囊式） ---------- */
+.gradio-container div[role="tablist"] {
+    gap: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+}
+.gradio-container button[role="tab"] {
+    border-radius: 999px !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    color: #64748b !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    padding: 8px 16px !important;
+    margin: 0 !important;
+    transition: all 0.22s ease !important;
+}
+.gradio-container button[role="tab"]:hover {
+    background: #ecfdf5 !important;
+    color: #047857 !important;
+}
+.gradio-container button[role="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.28) !important;
+    border-color: transparent !important;
+}
+/* 标签内容面板进入动画 */
+.gradio-container div[role="tabpanel"] {animation: fm-fade-up 0.3s ease both;}
+
+/* ---------- 6. Markdown 排版 ---------- */
+.gradio-container .prose h2, .gradio-container .prose h3 {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    padding-left: 12px;
+    border-left: 4px solid #10b981;
+    line-height: 1.35;
+}
+.gradio-container .prose hr {
+    border: none; height: 1px;
+    background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+    margin: 20px 0;
+}
+.gradio-container .prose p {color: #334155;}
+
+/* ---------- 7. 表单控件统一 ---------- */
+.gradio-container input:not([type="checkbox"]):not([type="radio"]),
+.gradio-container textarea {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease !important;
+}
+.gradio-container input:focus, .gradio-container textarea:focus {
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12) !important;
+}
+/* 组件标签文字（去胶囊后统一为精致小标题） */
+.gradio-container span[data-testid="block-info"] {letter-spacing: 0.3px;}
+
+/* Radio 选项胶囊 */
+.gradio-container label.svelte-1gzsjbx,
+.gradio-container .wrap label {
+    border-radius: 10px !important;
+}
+.gradio-container input[type="radio"] + * {
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+/* ---------- 8. 数据表格 ---------- */
+.gradio-container [data-testid="dataframe"], .gradio-container .gradio-scheme > .wrap {
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+.gradio-container table {border-collapse: separate; border-spacing: 0;}
+.gradio-container thead tr th {
+    background: #f0fdf4 !important;
+    color: #065f46 !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    border-bottom: 1px solid #d1fae5 !important;
+}
+.gradio-container tbody tr {transition: background-color 0.15s ease !important;}
+.gradio-container tbody tr:nth-child(even) {background: #fafcfa;}
+.gradio-container tbody tr:hover {background: #ecfdf5 !important;}
+
+/* ---------- 9. 聊天区 ---------- */
 #chat_sidebar {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 12px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 14px;
     border: 1px solid #e2e8f0;
-    height: calc(100vh - 200px);
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    height: calc(100vh - 210px);
     overflow-y: auto;
 }
-#chat_sidebar h3 {
-    color: #334155;
-    font-size: 14px;
-    margin-top: 12px;
-    margin-bottom: 8px;
+#chat_sidebar h3, #chat_sidebar .prose h3 {
+    color: #334155; font-size: 14px;
+    margin-top: 14px; margin-bottom: 8px;
+    border-left: none !important; padding-left: 0 !important;
 }
-
-/* 新建聊天按钮 */
-.new-chat-btn > button, .new-chat-btn button {
+.new-chat-btn button, button.new-chat-btn {
     border-radius: 10px !important;
     padding: 10px 20px !important;
     font-weight: 600 !important;
     font-size: 15px !important;
     width: 100% !important;
-    background: linear-gradient(135deg, #059669, #10b981) !important;
-    border: none !important;
-    transition: all 0.3s ease !important;
-}
-.new-chat-btn > button:hover, .new-chat-btn button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3) !important;
 }
 
-/* 会话列表表格 */
-#session_table {
-    font-size: 13px;
-}
-#session_table table {
-    border-collapse: collapse;
-    width: 100%;
-}
+/* 会话列表 */
+#session_table {font-size: 13px;}
+#session_table table {border-collapse: collapse; width: 100%;}
+#session_table thead tr th {background: #f8fafc !important; color: #64748b !important; border-bottom: 1px solid #e2e8f0 !important;}
 #session_table tbody tr {
     cursor: pointer;
     transition: background-color 0.15s ease;
     border-radius: 8px;
 }
-#session_table tbody tr:hover {
-    background-color: #d1fae5 !important;
-}
-/* 当前选中行高亮 */
+#session_table tbody tr:hover {background-color: #d1fae5 !important;}
 #session_table tbody tr.selected {
     background-color: #a7f3d0 !important;
     border-left: 3px solid #059669;
@@ -2089,52 +2334,71 @@ footer {display: none !important;}
 
 /* 主聊天区 */
 #chat_main {
-    background: white;
-    border-radius: 12px;
+    background: #ffffff;
+    border-radius: 16px;
     padding: 16px;
     border: 1px solid #e2e8f0;
-    height: calc(100vh - 200px);
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    height: calc(100vh - 210px);
     display: flex;
     flex-direction: column;
 }
 
-/* 聊天输入框 */
+/* 会话标题条 */
+.fm-session-title {
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border-left: 4px solid #059669;
+    display: flex; align-items: center; gap: 8px;
+}
+.fm-session-title span {color: #065f46; font-weight: 600; font-size: 15px;}
+
+/* 聊天气泡 */
+#main_chatbot .message {
+    font-size: 15px;
+    line-height: 1.65;
+    border-radius: 14px !important;
+}
+#main_chatbot {height: 100% !important; flex: 1;}
+
+/* 聊天输入框 + 发送按钮 */
 #chat_input textarea {
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     padding: 12px 16px !important;
     border: 1.5px solid #e2e8f0 !important;
     font-size: 15px !important;
-    transition: border-color 0.2s ease;
+    background: #f8fafc !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease !important;
 }
 #chat_input textarea:focus {
     border-color: #059669 !important;
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1) !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.10) !important;
 }
-
-/* 发送按钮 */
-.send-btn > button, .send-btn button {
-    border-radius: 10px !important;
+.send-btn button, button.send-btn {
+    border-radius: 12px !important;
     padding: 12px 20px !important;
     font-weight: 600 !important;
-    background: linear-gradient(135deg, #059669, #10b981) !important;
-    border: none !important;
-    transition: all 0.3s ease !important;
-}
-.send-btn > button:hover, .send-btn button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3) !important;
+    height: 100%;
 }
 
-/* 聊天机器人消息气泡微调 */
-#main_chatbot .message {
-    font-size: 15px;
-    line-height: 1.6;
+/* 聊天操作反馈条：空态隐藏 */
+.chat-feedback {border: none !important; background: transparent !important; box-shadow: none !important;}
+.chat-feedback:has(textarea:placeholder-shown) {display: none;}
+.chat-feedback textarea, .chat-feedback input {
+    font-size: 13px !important;
+    text-align: center !important;
+    color: #059669 !important;
+    background: #ecfdf5 !important;
+    border-radius: 8px !important;
+    padding: 6px 10px !important;
+    margin-top: 8px !important;
 }
 
-/* ======== 删除会话相关样式 ======== */
-
-/* 删除按钮 */
-.delete-session-btn > button, .delete-session-btn button {
+/* 删除当前会话按钮 */
+.delete-session-btn button, button.delete-session-btn {
     border-radius: 8px !important;
     font-size: 13px !important;
     width: 100% !important;
@@ -2144,7 +2408,7 @@ footer {display: none !important;}
     border: 1px solid #fecaca !important;
     transition: all 0.2s ease !important;
 }
-.delete-session-btn > button:hover, .delete-session-btn button:hover {
+.delete-session-btn button:hover, button.delete-session-btn:hover {
     background: #fee2e2 !important;
     border-color: #f87171 !important;
 }
@@ -2156,18 +2420,10 @@ footer {display: none !important;}
     border-radius: 12px;
     padding: 14px;
     margin-top: 10px;
+    animation: fm-fade-up 0.25s ease both;
 }
-#delete_confirm h3 {
-    color: #dc2626;
-    font-size: 15px;
-    margin-top: 0;
-    margin-bottom: 8px;
-}
-#delete_confirm p {
-    font-size: 13px;
-    color: #7f1d1d;
-    margin-bottom: 6px;
-}
+#delete_confirm h3 {color: #dc2626; font-size: 15px; margin-top: 0; margin-bottom: 8px;}
+#delete_confirm p {font-size: 13px; color: #7f1d1d; margin-bottom: 6px;}
 #delete_confirm blockquote {
     border-left: 3px solid #f87171;
     padding-left: 10px;
@@ -2176,16 +2432,18 @@ footer {display: none !important;}
     font-size: 13px;
 }
 
-/* 操作反馈消息 */
-.chat-feedback textarea, .chat-feedback input {
-    font-size: 13px !important;
-    text-align: center !important;
-    color: #059669 !important;
-    background: #ecfdf5 !important;
-    border-radius: 8px !important;
-    padding: 6px 10px !important;
-    margin-top: 8px !important;
+/* ---------- 10. 分组卡片（记录操作区 / 趋势区） ---------- */
+.fm-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 14px 6px 14px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    margin: 6px 0;
 }
+
+/* 查房小结输出框高度收敛 */
+.fm-panel .block:has(> label > span[data-testid="block-info"]) textarea {min-height: 120px;}
 """
 with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
     # ===== 会话状态 =====
@@ -2198,7 +2456,8 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         # 精美头部
         gr.HTML("""
         <div class="login-header">
-            <h2>🥗 膳康管家</h2>
+            <div class="fm-logo">🥗</div>
+            <h2>膳康管家</h2>
             <p>个性化膳食图像识别与营养智能管理系统</p>
         </div>
         """)
@@ -2252,16 +2511,10 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
 
         # 应用标题
         gr.HTML("""
-        <div style="text-align: center; max-width: 800px; margin: 0 auto; padding: 10px 0 20px 0;">
-            <h1 style="color: #059669; font-size: 2.8rem; font-weight: 800; margin-bottom: 10px; letter-spacing: 2px;">
-                🥗 膳康管家
-            </h1>
-            <h3 style="color: #475569; font-size: 1.2rem; font-weight: 400; margin-top: 0; margin-bottom: 15px;">
-                个性化膳食图像识别与营养智能管理系统
-            </h3>
-            <span style="background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;">
-                4C中国大学生计算机设计大赛参赛作品 | AI+智能医疗健康方向
-            </span>
+        <div class="fm-hero">
+            <h1>🥗 膳康管家</h1>
+            <h3>个性化膳食图像识别与营养智能管理系统</h3>
+            <span class="fm-hero-badge">4C中国大学生计算机设计大赛参赛作品 | AI+智能医疗健康方向</span>
         </div>
         """)
 
@@ -2355,14 +2608,14 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
             records_output = gr.Dataframe(label="当日膳食明细记录", wrap=True)
 
             # 删除记录功能
-            with gr.Row():
+            with gr.Row(elem_classes="fm-panel"):
                 delete_index_input = gr.Number(value=0, label="要删除的记录序号（从0开始，参考上方表格行号）", precision=0, minimum=0)
                 delete_btn = gr.Button("🗑️ 删除选中记录", variant="stop")
                 delete_status = gr.Textbox(label="删除状态", lines=1)
             export_status = gr.Textbox(label="导出状态", lines=1)
 
             gr.Markdown("### 📈 本周趋势分析")
-            with gr.Row():
+            with gr.Row(elem_classes="fm-panel"):
                 weekly_btn = gr.Button("查看本周多维度趋势", variant="primary")
                 weekly_msg = gr.Textbox(label="统计信息", lines=1)
                 weekly_chart = gr.Image(label="营养摄入趋势图（热量/蛋白质/碳水/脂肪）")
@@ -2370,7 +2623,7 @@ with gr.Blocks(title="膳康管家 - 智能医疗系统") as demo:
         # AI 专属健康咨询标签页（自定义聊天界面，参考 Ollama 风格）
         with gr.Tab("💬 AI 专属健康咨询"):
             gr.Markdown("### 🤖 您的私人营养师（三甲医院临床营养科主任医师人设）已上线")
-            with gr.Row():
+            with gr.Row(elem_classes="fm-panel"):
                 daily_summary_btn = gr.Button("🩺 查看主任医师今日查房小结", variant="secondary")
                 daily_summary_output = gr.Textbox(label="📋 今日查房小结", lines=12)
             gr.Markdown("---")
